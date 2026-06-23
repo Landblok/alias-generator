@@ -1,0 +1,68 @@
+-- Alias Generator
+-- Copyright (c) 2026 Landblok
+-- Licensed under the MIT License.
+
+-- Configuration
+set domainName to "REPLACE WITH YOUR DOMAIN" -- e.g., "@example.com"
+set logFile to (path to desktop as text) & "alias_log.txt"
+set suffixLength to 6 -- Change this to 5 or 6 depending on your preference
+
+-- 1. Prompt for the website/service name
+repeat
+	set promptResult to display dialog "Enter Website or Service Name:" default answer "" buttons {"Cancel", "Generate"} default button "Generate" with title "Alias Generator"
+	set serviceName to text returned of promptResult
+	if serviceName is not "" then exit repeat
+end repeat
+
+-- Clean up service name (lowercase and remove spaces)
+set serviceName to do shell script "echo " & quoted form of serviceName & " | tr '[:upper:]' '[:lower:]' | tr -d ' '"
+
+-- Read existing log file contents to check for duplicates
+set existingLogs to ""
+try
+	set existingLogs to read file logFile
+on error
+	-- File doesn't exist yet, which is perfectly fine
+end try
+
+-- 2. Loop until a completely unique random string is generated
+set alphaNumericPool to "abcdefghijklmnopqrstuvwxyz0123456789"
+set poolLength to length of alphaNumericPool
+set isUnique to false
+
+repeat until isUnique
+	set randString to ""
+	
+	-- Dynamically generate a random suffix based on the suffixLength variable
+	repeat suffixLength times
+		set randString to randString & character (random number from 1 to poolLength) of alphaNumericPool
+	end repeat
+	
+	-- Check if this specific random token already exists anywhere in your log file
+	if existingLogs does not contain ("_" & randString & domainName) then
+		set isUnique to true
+	end if
+end repeat
+
+-- 3. Construct the email address
+set generatedEmail to serviceName & "_" & randString & domainName
+
+-- 4. Copy to clipboard for instant pasting
+set the clipboard to generatedEmail
+
+-- 5. Track it in a local text file
+set timestamp to do shell script "date '+%Y-%m-%d %H:%M:%S'"
+set logLine to timestamp & " | " & serviceName & " -> " & generatedEmail & return
+
+try
+	set fileReference to open for access file logFile with write permission
+	write logLine to fileReference starting at eof
+	close access fileReference
+on error
+	try
+		close access file logFile
+	end try
+end try
+
+-- 6. Success notification
+display notification generatedEmail with title "Alias Copied & Logged!"
